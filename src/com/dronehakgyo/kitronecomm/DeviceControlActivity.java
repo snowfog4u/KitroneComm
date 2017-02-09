@@ -31,13 +31,18 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ExpandableListView;
-import android.widget.SimpleExpandableListAdapter;
-import android.widget.TextView;
+import android.view.View.*;
+import android.widget.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import com.dronehakgyo.mw.*;
+import com.dronehakgyo.mw.OSDCommon.MSPCommnand;
+import com.example.android.bluetoothlegatt.*;
+import com.example.android.mw.*;
+import com.example.android.mw.OSDCommon.*;
 
 /**
  * For a given BLE device, this Activity provides the user interface to connect, display data,
@@ -64,6 +69,13 @@ public class DeviceControlActivity extends Activity {
 
     private final String LIST_NAME = "NAME";
     private final String LIST_UUID = "UUID";
+    
+    //
+    //++ lbo add
+    //
+    private Button mBtnVersion;
+    private Button mBtnSensorInfo;
+    //--
 
     // Code to manage Service lifecycle.
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -106,9 +118,10 @@ public class DeviceControlActivity extends Activity {
                 clearUI();
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 // Show all the supported services and characteristics on the user interface.
-                displayGattServices(mBluetoothLeService.getSupportedGattServices());
+                // displayGattServices(mBluetoothLeService.getSupportedGattServices());
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+                //displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+            	displayData( intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA) );
             }
         }
     };
@@ -148,14 +161,15 @@ public class DeviceControlActivity extends Activity {
     };
 
     private void clearUI() {
-        mGattServicesList.setAdapter((SimpleExpandableListAdapter) null);
+        // mGattServicesList.setAdapter((SimpleExpandableListAdapter) null);
         mDataField.setText(R.string.no_data);
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.gatt_services_characteristics);
+        // setContentView(R.layout.gatt_services_characteristics);
+        setContentView(R.layout.main_layout);
 
         final Intent intent = getIntent();
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
@@ -163,8 +177,8 @@ public class DeviceControlActivity extends Activity {
 
         // Sets up UI references.
         ((TextView) findViewById(R.id.device_address)).setText(mDeviceAddress);
-        mGattServicesList = (ExpandableListView) findViewById(R.id.gatt_services_list);
-        mGattServicesList.setOnChildClickListener(servicesListClickListner);
+        //mGattServicesList = (ExpandableListView) findViewById(R.id.gatt_services_list);
+        //mGattServicesList.setOnChildClickListener(servicesListClickListner);
         mConnectionState = (TextView) findViewById(R.id.connection_state);
         mDataField = (TextView) findViewById(R.id.data_value);
 
@@ -172,6 +186,55 @@ public class DeviceControlActivity extends Activity {
         getActionBar().setDisplayHomeAsUpEnabled(true);
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+        
+        //
+        //++ lbo add
+        //
+        mBtnVersion = (Button) findViewById( R.id.btn_version );
+        mBtnVersion.setOnClickListener( new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				byte[] mspData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_IDENT );
+		    	
+				if( mConnected == true && mspData != null )
+				{
+					mBluetoothLeService.WriteValue( mspData );
+					mDataField.append( "Send Version Command \n" );
+				}
+				else
+				{
+					Toast.makeText( getBaseContext(), "Not Connected", Toast.LENGTH_SHORT ).show();
+					mDataField.append( "Not Connected \n" );
+				}
+			}
+        	
+        });
+        
+        mBtnSensorInfo = (Button) findViewById( R.id.btn_sensor_info );
+        mBtnSensorInfo.setOnClickListener( new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+		    	byte[] mspData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_STATUS );
+				//byte[] mspData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_IDENT );
+		    	
+				if( mConnected == true && mspData != null )
+				{
+					mBluetoothLeService.WriteValue( mspData );
+					mDataField.append( "Send Sensor Command \n" );
+				}
+				else
+				{
+					Toast.makeText( getBaseContext(), "Not Connected", Toast.LENGTH_SHORT ).show();
+					mDataField.append( "Not Connected \n" );
+				}
+			}
+        	
+        });
+        //--
     }
 
     @Override
@@ -240,6 +303,7 @@ public class DeviceControlActivity extends Activity {
             mDataField.setText(data);
         }
     }
+    
 
     // Demonstrates how to iterate through the supported GATT Services/Characteristics.
     // In this sample, we populate the data structure that is bound to the ExpandableListView
@@ -306,4 +370,35 @@ public class DeviceControlActivity extends Activity {
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         return intentFilter;
     }
+    
+    //
+    //++ lbo add
+    //
+    private void displayData( byte[] data )
+    {
+    	//byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+    	Log.d( TAG, "Instream Data - Length : " + data.length + ", data : " + HexUtils.hexToStringPrint( data, 0, data.length ) );
+    	
+    	mDataField.append( HexUtils.hexToStringPrint( data, 0, data.length ) + "\n" );
+    	
+    	mOSDData.parseRawData( data );
+    	
+    	int command = (data[4] & 0xFF);
+    	
+    	if( command == OSDCommon.MSP_IDENT )
+    	{    	
+	    	int version = mOSDData.getVersion();
+	    	int multiType = mOSDData.getMultiType();
+	    	int MSPVersion = mOSDData.getMSPVersion();
+	    	int multiCapability = mOSDData.getMultiCapability();
+	    	
+	    	String strMsg = "Version : " + version + "(" + String.valueOf(version / 100f) +")\n";
+	    	strMsg += "MultiType : " + multiType + "[" + MultiTypeName[multiType] + "]\n";
+	    	strMsg += "MSP_VERSION : " + MSPVersion + "(" + String.valueOf(MSPVersion) + ")\n";
+	    	strMsg += "Capability : " + multiCapability;
+	    	
+	    	mDataField.append( strMsg );
+    	}
+    }    
+    //--
 }

@@ -65,6 +65,73 @@ public class BluetoothLeService extends Service {
 
     public final static UUID UUID_HEART_RATE_MEASUREMENT =
             UUID.fromString(SampleGattAttributes.HEART_RATE_MEASUREMENT);
+    
+    //
+    //++ lbo add
+    //
+    public final static UUID UUID_NOTIFY =
+            UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");  
+    public final static UUID UUID_SERVICE =
+        UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
+    
+    private BluetoothGattCharacteristic mNotifyCharacteristic;
+    
+    //////////////////////////////////////////////////////////////////
+    ///
+    
+    public void WriteValue( byte[] data )
+    {
+    	if( mBluetoothGatt != null )
+    	{
+    		mNotifyCharacteristic.setValue( data );
+    		mBluetoothGatt.writeCharacteristic( mNotifyCharacteristic );
+    	}
+    }
+    
+    public void findService( List<BluetoothGattService> gattServices )
+    {
+    	Log.i(TAG, "Count is:" + gattServices.size());
+    	
+    	for( BluetoothGattService gattService : gattServices ) 
+    	{
+    		Log.i(TAG, gattService.getUuid().toString());
+			Log.i(TAG, UUID_SERVICE.toString());
+			
+    		if( gattService.getUuid().toString().equalsIgnoreCase(UUID_SERVICE.toString()) )
+    		{
+    			List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
+    			
+    			Log.i(TAG, "Count is:" + gattCharacteristics.size());
+		
+    			for( BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics ) 
+    			{
+    				if( gattCharacteristic.getUuid().toString().equalsIgnoreCase(UUID_NOTIFY.toString()) )
+    				{
+    					Log.i( TAG, gattCharacteristic.getUuid().toString() );
+    					Log.i( TAG, UUID_NOTIFY.toString() );
+    					
+    					mNotifyCharacteristic = gattCharacteristic;
+    					mNotifyCharacteristic.setWriteType( BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE );
+    					setCharacteristicNotification( gattCharacteristic, true);
+    					
+    					Log.i( TAG, "find new gattCharacteristic" );
+    					
+    					break;
+    				}
+    			}
+    			
+       		    if( mNotifyCharacteristic != null )
+       		    {
+    		    	Log.i( TAG, "***success found all characteritics" );
+    		    	
+    		    	broadcastUpdate( ACTION_GATT_SERVICES_DISCOVERED );
+        		    break;
+				}
+    		}
+    	}
+    }    
+    
+    //--
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
@@ -91,9 +158,13 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
-            } else {
+            if( status == BluetoothGatt.GATT_SUCCESS )
+            {
+                //broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+            	findService( gatt.getServices() );
+            } 
+            else 
+            {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
         }
@@ -143,10 +214,13 @@ public class BluetoothLeService extends Service {
             // For all other profiles, writes the data formatted in HEX.
             final byte[] data = characteristic.getValue();
             if (data != null && data.length > 0) {
+            	/*
                 final StringBuilder stringBuilder = new StringBuilder(data.length);
                 for(byte byteChar : data)
                     stringBuilder.append(String.format("%02X ", byteChar));
                 intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
+                */
+            	intent.putExtra(EXTRA_DATA,data);
             }
         }
         sendBroadcast(intent);

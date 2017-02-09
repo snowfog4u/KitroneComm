@@ -30,11 +30,10 @@
     <string name="menu_disconnect">Disconnect</string>
     <string name="menu_scan">Scan</string>
     <string name="menu_stop">Stop</string>
-    
     <!-- lbo add -->
     <!-- Button names -->
     <string name="title_version">Version</string>
-    <string name="title_sensor_info">Sensor Status</string>    
+    <string name="title_sensor_info">Sensor Status</string>
     <string name="title_calibrate_acc">Calibrate Acc</string>
     <string name="title_calibrate_mag">Calibrate Mag</string>
 </resources>
