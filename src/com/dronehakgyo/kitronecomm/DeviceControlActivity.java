@@ -40,9 +40,6 @@ import java.util.List;
 
 import com.dronehakgyo.mw.*;
 import com.dronehakgyo.mw.OSDCommon.MSPCommnand;
-import com.example.android.bluetoothlegatt.*;
-import com.example.android.mw.*;
-import com.example.android.mw.OSDCommon.*;
 
 /**
  * For a given BLE device, this Activity provides the user interface to connect, display data,
@@ -75,6 +72,10 @@ public class DeviceControlActivity extends Activity {
     //
     private Button mBtnVersion;
     private Button mBtnSensorInfo;
+    
+    private OSDData mOSDData = new OSDData();  
+    private String[] MultiTypeName = { "", "TRI", "QUADP", "QUADX", "BI", "GIMBAL", "Y6", "HEX6", "FLYING_WING", "Y4", "HEX6X", "OCTOX8", "OCTOFLATX", "OCTOFLATP", "AIRPLANE", "HELI_120_CCPM", "HELI_90_DEG", "VTAIL4", "HEX6H", "PPM_TO_SERVO", "DUALCOPTER", "SINGLECOPTER" };
+
     //--
 
     // Code to manage Service lifecycle.
@@ -201,7 +202,7 @@ public class DeviceControlActivity extends Activity {
 				if( mConnected == true && mspData != null )
 				{
 					mBluetoothLeService.WriteValue( mspData );
-					mDataField.append( "Send Version Command \n" );
+					mDataField.setText( "Send Version Command \n" );
 				}
 				else
 				{
@@ -224,7 +225,7 @@ public class DeviceControlActivity extends Activity {
 				if( mConnected == true && mspData != null )
 				{
 					mBluetoothLeService.WriteValue( mspData );
-					mDataField.append( "Send Sensor Command \n" );
+					mDataField.setText( "Send Sensor Command \n" );
 				}
 				else
 				{
@@ -379,7 +380,7 @@ public class DeviceControlActivity extends Activity {
     	//byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
     	Log.d( TAG, "Instream Data - Length : " + data.length + ", data : " + HexUtils.hexToStringPrint( data, 0, data.length ) );
     	
-    	mDataField.append( HexUtils.hexToStringPrint( data, 0, data.length ) + "\n" );
+    	mDataField.append( "Receive Data : " + HexUtils.hexToStringPrint( data, 0, data.length ) + "\n" );
     	
     	mOSDData.parseRawData( data );
     	
@@ -387,18 +388,79 @@ public class DeviceControlActivity extends Activity {
     	
     	if( command == OSDCommon.MSP_IDENT )
     	{    	
-	    	int version = mOSDData.getVersion();
-	    	int multiType = mOSDData.getMultiType();
-	    	int MSPVersion = mOSDData.getMSPVersion();
-	    	int multiCapability = mOSDData.getMultiCapability();
-	    	
-	    	String strMsg = "Version : " + version + "(" + String.valueOf(version / 100f) +")\n";
-	    	strMsg += "MultiType : " + multiType + "[" + MultiTypeName[multiType] + "]\n";
-	    	strMsg += "MSP_VERSION : " + MSPVersion + "(" + String.valueOf(MSPVersion) + ")\n";
-	    	strMsg += "Capability : " + multiCapability;
-	    	
-	    	mDataField.append( strMsg );
+	    	displayVersion();
     	}
-    }    
+    	else if( command == OSDCommon.MSP_STATUS )
+    	{
+    		displaySensorInfo();
+    	}
+    }
+    
+    private void displayVersion()
+    {
+    	int version = mOSDData.getVersion();
+    	int multiType = mOSDData.getMultiType();
+    	int mspVersion = mOSDData.getMSPVersion();
+    	int multiCapability = mOSDData.getMultiCapability();
+    	
+    	String strMsg = "Version : " + version + "(" + String.valueOf(version / 100f) +")\n";
+    	strMsg += "MultiType : " + multiType + "[" + MultiTypeName[multiType] + "]\n";
+    	strMsg += "MSP_VERSION : " + mspVersion + "(" + String.valueOf(mspVersion) + ")\n";
+    	strMsg += "Capability : " + multiCapability;
+    	
+    	mDataField.append( strMsg );    	
+    }
+    
+    private void displaySensorInfo()
+    {
+    	boolean accPresent = false;
+    	boolean baroPresent = false;
+    	boolean magPresent = false;
+    	boolean gpsPresent = false;
+    	boolean sonarPresent = false;
+    	
+    	int cycleTime = mOSDData.getCycleTime();
+    	int i2cError = mOSDData.getI2cError();
+    	int sensorPresent = mOSDData.getPresent();
+    	int mode = mOSDData.getMode();
+    	
+    	if( (sensorPresent & 1) > 0 )
+    	{
+    		accPresent = true;
+    	}
+    	
+    	if( (sensorPresent & 2) > 0 )
+    	{
+    		baroPresent = true;
+    	}
+    	
+    	if( (sensorPresent & 4) > 0 )
+    	{
+    		magPresent = true;
+    	}
+    	
+    	if( (sensorPresent & 8) > 0 )
+    	{
+    		gpsPresent = true;
+    	}
+    	
+    	if( (sensorPresent & 16) > 0 )
+    	{
+    		sonarPresent = true;
+    	}
+    	
+    	String strMsg = "CycleTime : " + cycleTime + "\n";
+    	strMsg += "I2c Error Count : " + i2cError + "\n";
+    	strMsg += "Sensor Present : " + sensorPresent + "\n";
+    	strMsg += "\t AccPresent : " + accPresent + "\n";
+    	strMsg += "\t BaroPresent : " + baroPresent + "\n";
+    	strMsg += "\t MagPresent : " + magPresent + "\n";
+    	strMsg += "\t gpsPresent : " + gpsPresent + "\n";
+    	strMsg += "\t sonarPresent : " + sonarPresent + "\n";
+    	strMsg += "Mode : " + mode;
+    	
+    	mDataField.append( strMsg );
+    }
+    
     //--
 }

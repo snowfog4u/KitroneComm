@@ -282,10 +282,55 @@ public class OSDData {
 		this.mode = mode;
 	}
 
+	//
+	//++ lbo add - 2017-02-02
+	//
+	public int getVersion()
+	{
+		return version;
+	}
 
+	public int getMultiType()
+	{
+		return multiType;
+	}
+	
+	public int getMSPVersion()
+	{
+		return mspVersion;
+	}
+	
+	public int getMultiCapability()
+	{
+		return multiCapability;
+	}
+	
+	public int getCycleTime()
+	{
+		return cycleTime;
+	}
+	
+	public int getI2cError()
+	{
+		return i2cError;
+	}
+	
+	public int getPresent()
+	{
+		return present;
+	}
+	//--
+	
 	private int version;
 	
 	private int multiType;
+	
+	//
+	//++ lbo add - 2017-02-02
+	//
+	private int mspVersion;
+	private int multiCapability;
+	//--
 
 	private float gyroX;
 	private float gyroY;
@@ -459,8 +504,12 @@ public class OSDData {
 	        case OSDCommon.MSP_IDENT:
 	            version = read8();
 	            multiType = read8();
-	            read8(); // MSP version
-	            read32();// capability
+	            
+	            //
+	            //++ lbo modify
+	            //
+	            mspVersion = read8(); // MSP version
+	            multiCapability = (int)read32();// capability
 	            break;
 	        case OSDCommon.MSP_STATUS:
 	            cycleTime = read16();
