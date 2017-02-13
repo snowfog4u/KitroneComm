@@ -72,6 +72,7 @@ public class DeviceControlActivity extends Activity {
     //
     private Button mBtnVersion;
     private Button mBtnSensorInfo;
+    private Button mBtnAccCalibrate;
     
     private OSDData mOSDData = new OSDData();  
     private String[] MultiTypeName = { "", "TRI", "QUADP", "QUADX", "BI", "GIMBAL", "Y6", "HEX6", "FLYING_WING", "Y4", "HEX6X", "OCTOX8", "OCTOFLATX", "OCTOFLATP", "AIRPLANE", "HELI_120_CCPM", "HELI_90_DEG", "VTAIL4", "HEX6H", "PPM_TO_SERVO", "DUALCOPTER", "SINGLECOPTER" };
@@ -226,6 +227,28 @@ public class DeviceControlActivity extends Activity {
 				{
 					mBluetoothLeService.WriteValue( mspData );
 					mDataField.setText( "Send Sensor Command \n" );
+				}
+				else
+				{
+					Toast.makeText( getBaseContext(), "Not Connected", Toast.LENGTH_SHORT ).show();
+					mDataField.append( "Not Connected \n" );
+				}
+			}
+        	
+        });
+        
+        mBtnAccCalibrate = (Button) findViewById( R.id.btn_calibrate_acc );
+        mBtnAccCalibrate.setOnClickListener( new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				byte[] mspData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_ACC_CALIBRATION );
+		    	
+				if( mConnected == true && mspData != null )
+				{
+					mBluetoothLeService.WriteValue( mspData );
+					mDataField.setText( "Send ACC Calibrate Command \n" );
 				}
 				else
 				{
