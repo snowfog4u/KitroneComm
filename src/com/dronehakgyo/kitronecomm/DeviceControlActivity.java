@@ -25,8 +25,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.os.Bundle;
-import android.os.IBinder;
+import android.os.*;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -34,9 +33,7 @@ import android.view.View;
 import android.view.View.*;
 import android.widget.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import com.dronehakgyo.mw.*;
 import com.dronehakgyo.mw.OSDCommon.MSPCommnand;
@@ -73,6 +70,16 @@ public class DeviceControlActivity extends Activity {
     private Button mBtnVersion;
     private Button mBtnSensorInfo;
     private Button mBtnAccCalibrate;
+    private Button mBtnTakeOff;
+    private Button mBtnStop;
+    private SeekBar mSeekBarThrottle;
+    private int mValue = 0;
+    
+    private Timer mTimer;
+    private byte mDataPackage[] = new byte[11];
+    private Handler mHandler = new Handler();
+    
+    private static final int  FPS = 14; //max 17
     
     private OSDData mOSDData = new OSDData();  
     private String[] MultiTypeName = { "", "TRI", "QUADP", "QUADX", "BI", "GIMBAL", "Y6", "HEX6", "FLYING_WING", "Y4", "HEX6X", "OCTOX8", "OCTOFLATX", "OCTOFLATP", "AIRPLANE", "HELI_120_CCPM", "HELI_90_DEG", "VTAIL4", "HEX6H", "PPM_TO_SERVO", "DUALCOPTER", "SINGLECOPTER" };
@@ -258,6 +265,74 @@ public class DeviceControlActivity extends Activity {
 			}
         	
         });
+        
+        mBtnTakeOff = (Button) findViewById( R.id.btn_takeoff );
+        mBtnTakeOff.setOnClickListener( new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				byte[] mspData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_ARM );
+		    	
+				if( mConnected == true && mspData != null )
+				{
+					mBluetoothLeService.WriteValue( mspData );
+					mDataField.setText( "Send Arm Command \n" );
+				}
+				else
+				{
+					Toast.makeText( getBaseContext(), "Not Connected", Toast.LENGTH_SHORT ).show();
+					mDataField.append( "Not Connected \n" );
+				}
+			}
+        	
+        });
+        
+        mBtnStop = (Button) findViewById( R.id.btn_stop );
+        mBtnStop.setOnClickListener( new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				byte[] mspData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_DISARM );
+		    	
+				if( mConnected == true && mspData != null )
+				{
+					mBluetoothLeService.WriteValue( mspData );
+					mDataField.setText( "Send Disarm Command \n" );
+				}
+				else
+				{
+					Toast.makeText( getBaseContext(), "Not Connected", Toast.LENGTH_SHORT ).show();
+					mDataField.append( "Not Connected \n" );
+				}
+			}
+        	
+        });
+        
+        mSeekBarThrottle = (SeekBar) findViewById( R.id.seekbar );
+        mSeekBarThrottle.setProgress( mValue );
+        mSeekBarThrottle.setOnSeekBarChangeListener( new SeekBar.OnSeekBarChangeListener() {
+			
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+				stop();
+			}
+			
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+				start();
+			}
+			
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				// TODO Auto-generated method stub
+				Log.d( TAG, "onProgressChanged : " + progress );
+				mValue = progress;
+			}
+		});        
         //--
     }
 
@@ -407,7 +482,11 @@ public class DeviceControlActivity extends Activity {
     	
     	mOSDData.parseRawData( data );
     	
-    	int command = (data[4] & 0xFF);
+    	int command = 0x00;
+    	if( data.length > 6 )
+    	{
+    		command = (data[4] & 0xFF);
+    	}
     	
     	if( command == OSDCommon.MSP_IDENT )
     	{    	
@@ -485,5 +564,91 @@ public class DeviceControlActivity extends Activity {
     	mDataField.append( strMsg );
     }
     
+	public void start()
+	{
+		stop();
+		
+		initDataPackage();
+				
+		mTimer = new Timer();
+		mTimer.schedule( new TimerTask() {
+			
+			@Override
+			public void run() {
+				mHandler.post( new Runnable() {
+					
+					@Override
+					public void run() {
+						transmmit();						
+					}
+				});
+				
+			}
+		}, 0, 1000 / FPS);
+	}
+	
+	public void stop()
+	{
+		if( mTimer != null )
+		{
+			mTimer.cancel();
+			mTimer = null;
+		}
+	}
+    
+    private void transmmit()
+    {
+    	updateDataPackage();
+    	
+    	if( mConnected == true && mDataPackage != null )
+		{
+			mBluetoothLeService.WriteValue( mDataPackage );
+			//mDataField.append( "Send Throttle Info \n" );
+		}
+		else
+		{
+			Toast.makeText( getBaseContext(), "Not Connected", Toast.LENGTH_SHORT ).show();
+			mDataField.append( "Not Connected \n" );
+		}
+    }
+    
+	private void initDataPackage()
+	{
+		mDataPackage[0] = '$';
+		mDataPackage[1] = 'M';
+		mDataPackage[2] = '<';
+		mDataPackage[3] = 5;
+		mDataPackage[4] = (byte)(OSDCommon.MSPCommnand.MSP_SET_RAW_RC_TINY.value());
+		
+		updateDataPackage();
+	}
+	
+    private void updateDataPackage()
+    {
+		byte checkSum = 0;
+	    
+	    int dataSizeIdx = 3;
+	    int checkSumIdx = 10;
+	    	    
+	    checkSum ^= (mDataPackage[dataSizeIdx] & 0xFF);
+	    checkSum ^= (mDataPackage[dataSizeIdx + 1] & 0xFF);
+	    
+	    mDataPackage[5] = (byte)0x00; // 0x7D;
+	    checkSum ^= (mDataPackage[5] & 0xFF);
+	    
+	    mDataPackage[6] = (byte)0x00; // 0x7D;
+	    checkSum ^= (mDataPackage[6] & 0xFF);
+	    
+	    mDataPackage[7] = (byte)0x00; // 0x7D;
+	    checkSum ^= (mDataPackage[7] & 0xFF);
+	    
+	    mDataPackage[8] = (byte) (mValue & 0xFF);
+	    checkSum ^= (mDataPackage[8] & 0xFF);
+	    
+	    mDataPackage[9] = (byte)0x00; //0x55;	    
+	    checkSum ^= (mDataPackage[5 + 4] & 0xFF);
+	       
+	    mDataPackage[checkSumIdx] = (byte) checkSum;
+	}
     //--
 }

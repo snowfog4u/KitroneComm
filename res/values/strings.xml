@@ -36,4 +36,6 @@
     <string name="title_sensor_info">Sensor Status</string>
     <string name="title_calibrate_acc">Calibrate Acc</string>
     <string name="title_calibrate_mag">Calibrate Mag</string>
+    <string name="title_take_off">Take Off</string>
+    <string name="title_stop">Stop</string>
 </resources>
