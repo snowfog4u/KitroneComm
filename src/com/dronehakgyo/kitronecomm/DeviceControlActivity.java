@@ -33,6 +33,7 @@ import android.view.View;
 import android.view.View.*;
 import android.widget.*;
 
+import java.io.*;
 import java.util.*;
 
 import com.dronehakgyo.mw.*;
@@ -251,6 +252,15 @@ public class DeviceControlActivity extends Activity {
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				byte[] mspData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_ACC_CALIBRATION );
+				String mspString = "";
+				try {
+					mspString = new String( mspData, "UTF-8" );
+				} catch (UnsupportedEncodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				Log.d( TAG, "Acc Calibration - Length : " + mspData.length + ", Data : " + mspString  );
 		    	
 				if( mConnected == true && mspData != null )
 				{
@@ -262,6 +272,10 @@ public class DeviceControlActivity extends Activity {
 					Toast.makeText( getBaseContext(), "Not Connected", Toast.LENGTH_SHORT ).show();
 					mDataField.append( "Not Connected \n" );
 				}
+				
+				byte[] armData = OSDCommon.getSimpleCommand( MSPCommnand.MSP_ARM );
+				Log.d( TAG, "Arm Data - Length : " + armData.length + ", Data : " + HexUtils.hexToStringPrint( armData ) );
+				Log.d( TAG, "Arm Data - Length : " + armData.length + ", Data : " + HexUtils.asciiToStringPrint( armData ) );
 			}
         	
         });

@@ -74,7 +74,7 @@ tmp/
 .recommenders
 
 # Eclipse Core
-.project
+# .project
 
 # External tool builders
 .externalToolBuilders/
@@ -89,7 +89,7 @@ tmp/
 .cproject
 
 # JDT-specific (Eclipse Java Development Tools)
-.classpath
+# .classpath
 
 # Java annotation processor (APT)
 .factorypath
